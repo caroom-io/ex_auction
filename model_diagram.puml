@@ -1,0 +1,22 @@
+@startuml
+map Auction {
+ id => UUID
+ currency => enum (EUR, USD, NGN)
+ name => string
+ min_bid => money
+ start_time => datetime
+ end_time => datetime
+ type => enum (english dutch, second_best and closed)
+ status => enum (started, paused, ended)
+ winning_bid => int:references:Bid
+ item_id => unique string
+}
+
+map Bid {
+  id => UUID
+  offer_value => money
+  user_id => 
+}
+
+Auction <|-- Bid
+@enduml
