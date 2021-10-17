@@ -11,6 +11,15 @@ defmodule ExAuction do
       iex> ExAuction.hello()
       :world
 
+  # Aution Behavior
+  - place_bid
+  - start
+  - create
+  - end
+
+
+  # Auction Adapter
+
   """
   def hello do
     :world
