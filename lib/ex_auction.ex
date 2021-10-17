@@ -1,27 +1,46 @@
 defmodule ExAuction do
   @moduledoc """
-  Documentation for `ExAuction`.
+  Public interface functions for Auctions
   """
 
   @doc """
-  Hello world.
+  Place bid.
 
   ## Examples
 
-      iex> ExAuction.hello()
-      :world
-
-  # Aution Behavior
-  - place_bid
-  - start
-  - create
-  - end
-
-
-  # Auction Adapter
+      iex> ExAuction.place_bid()
+      {:ok, %ExAuction.Auction.Bid{}}
 
   """
-  def hello do
-    :world
+
+  def place_bid() do
+  end
+
+  @doc """
+  Start an auction.
+
+  ## Examples
+
+      iex> ExAuction.start()
+      {:ok, %ExAuction.Auction{}}
+
+  """
+  @spec start(ExAuction.Auction.t()) ::
+          {:ok, ExAuction.Auction.t()} | {:error, :alread_started} | {:error, :bad_argument}
+  def start(%ExAuction.Auction{} = auction) do
+    ExAuction.Supervisor.start_auction(auction)
+  end
+
+  @doc """
+  Pause an auction.
+
+  ## Examples
+
+      iex> ExAuction.pause()
+      {:ok, %ExAuction.Auction{}}
+
+  """
+  def pause() do
+    {:ok, %ExAuction.Auction{}}
   end
 end

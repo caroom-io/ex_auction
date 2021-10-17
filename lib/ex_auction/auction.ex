@@ -1,4 +1,4 @@
-defmodule Auction do
+defmodule ExAuction.Auction do
   defstruct [
     :currency,
     :end_time,

@@ -9,6 +9,7 @@ defmodule ExAuction.Application do
     children = [
       # Starts a worker by calling: ExAuction.Worker.start_link(arg)
       # {ExAuction.Worker, arg}
+      {Registry, keys: :unique, name: ExAuction.Registry}
     ]
 
     # See https://hexdocs.pm/elixir/Supervisor.html
