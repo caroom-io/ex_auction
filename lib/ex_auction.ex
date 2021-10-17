@@ -1,6 +1,6 @@
 defmodule ExAuction do
   alias ExAuction.Auction
-  @strategies [english: ExAuction.Strategies.English]
+
   @moduledoc """
   Public interface functions for Auctions
   """
@@ -14,11 +14,8 @@ defmodule ExAuction do
       {:ok, %ExAuction.Auction.Bid{}}
 
   """
-  Enum.each(@strategies, fn {strategy, strategy_module} ->
-    def place_bid(%Auction{type: unquote(strategy)}, %Auction.Bid{} = bid) do
-      apply(unquote(strategy_module), :place_bid, [bid])
-    end
-  end)
+
+  defdelegate place_bid(auction, bid), to: ExAuction.Worker
 
   @doc """
   Start an auction.

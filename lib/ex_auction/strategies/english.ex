@@ -2,9 +2,11 @@ defmodule ExAuction.Strategies.English do
   @behaviour ExAuction.Behaviour
 
   @impl true
-  def place_bid(%ExAuction.Auction{step: step}, %ExAuction.Auction.Bid{value: value} = new_bid) when is_number(value) do
-    current_highest_bid = 20 # Find current highest bid
-    next_allowed_bid = current_highest_bid + step || 5
+  def place_bid(%ExAuction.Auction{step: step}, %ExAuction.Auction.Bid{value: value} = new_bid)
+      when is_number(value) do
+    # Find current highest bid
+    current_highest_bid = 20
+    next_allowed_bid = current_highest_bid + (step || 5)
 
     if value > next_allowed_bid do
       # Insert the new bid in registy?
@@ -13,7 +15,10 @@ defmodule ExAuction.Strategies.English do
       # Update winning bid
 
       # Q: How do we persist bid
-      {:error, ExAuction.Auction.Bid.TooLow.new("Specified bid is too low, value must be larger than #{next_allowed_bid}")}
+      {:error,
+       ExAuction.Auction.Bid.TooLow.new(
+         "Specified bid is too low, value must be larger than #{next_allowed_bid}"
+       )}
     end
   end
 
