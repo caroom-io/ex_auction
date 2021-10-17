@@ -7,6 +7,7 @@ defmodule ExAuction.Auction do
     :name,
     :start_time,
     :status,
+    :step,
     :type,
     :winning_bid
   ]
@@ -18,7 +19,8 @@ defmodule ExAuction.Auction do
           min_bid: :decimal,
           name: :string,
           start_time: :integer,
-          status: :string,
+          step: :decimal,
+          status: :started | :suspended | :finished,
           type: :string,
           winning_bid: :string
         }
@@ -29,5 +31,16 @@ defmodule ExAuction.Auction do
             value: :decimal,
             user_id: :string
           }
+
+    defmodule TooLow do
+      defstruct [:code, :message]
+
+      def new(message) do
+        %__MODULE__{
+          code: :bid_too_low,
+          message: message
+        }
+      end
+    end
   end
 end
