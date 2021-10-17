@@ -1,4 +1,4 @@
-defmodule ExAuction.Adapters.English do
+defmodule ExAuction.Strategies.English do
   @behaviour ExAuction.AuctionApi
 
   @impl true

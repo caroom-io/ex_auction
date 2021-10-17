@@ -18,7 +18,7 @@ defmodule ExAuction.Auction do
           min_bid: :decimal,
           name: :string,
           start_time: :integer,
-          status: :string,
+          status: :active | :suspended | :finished,
           type: :string,
           winning_bid: :string
         }
