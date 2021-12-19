@@ -1,9 +1,5 @@
-defmodule ExAuction.Supervisor do
+defmodule ExAuction.Auction.Supervisor do
   use DynamicSupervisor
-
-  def start_auction(%ExAuction.Auction{} = auction) do
-    {:ok, _pid} = ExAuction.Worker.start_link(auction)
-  end
 
   def start_link(init_arg) do
     DynamicSupervisor.start_link(__MODULE__, init_arg, name: __MODULE__)
@@ -12,5 +8,9 @@ defmodule ExAuction.Supervisor do
   @impl true
   def init(_init_arg) do
     DynamicSupervisor.init(strategy: :one_for_one)
+  end
+
+  def start_auction(%ExAuction.Auction{} = auction) do
+    DynamicSupervisor.start_child(__MODULE__, {ExAuction.Auction.Worker, auction})
   end
 end

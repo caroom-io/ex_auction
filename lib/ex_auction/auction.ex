@@ -28,18 +28,20 @@ defmodule ExAuction.Auction do
     defstruct [:value, :user_id]
 
     @type t :: %__MODULE__{
-            value: :decimal,
+            value: :integer,
             user_id: :string
           }
 
-    defmodule TooLow do
-      defstruct [:code, :message]
+    defmodule Errors do
+      defmodule TooLow do
+        defstruct [:code, :message]
 
-      def new(message) do
-        %__MODULE__{
-          code: :bid_too_low,
-          message: message
-        }
+        def new(message) do
+          %__MODULE__{
+            code: :bid_too_low,
+            message: message
+          }
+        end
       end
     end
   end

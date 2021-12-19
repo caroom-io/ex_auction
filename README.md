@@ -1,5 +1,4 @@
 # ExAuction
-
 **TODO: Add description**
 
 ## Installation

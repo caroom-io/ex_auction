@@ -4,5 +4,5 @@ defmodule ExAuction.Behaviour do
 
   # @callback start(auction()) :: {:ok, auction()} | {:error, any()}
   @callback pause(auction()) :: {:ok, auction()} | {:error, any()}
-  @callback place_bid(auction(), bid()) :: {:ok, bid()}
+  @callback allow_bid?(auction(), bid()) :: {:ok, bid()} | {:error, any()}
 end

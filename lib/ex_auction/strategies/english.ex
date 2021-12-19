@@ -1,24 +1,29 @@
 defmodule ExAuction.Strategies.English do
+  alias ExAuction.Auction.Worker.State
+  alias ExAuction.Auction.Bid.Errors
   @behaviour ExAuction.Behaviour
 
   @impl true
-  def place_bid(%ExAuction.Auction{step: step}, %ExAuction.Auction.Bid{value: value} = new_bid)
+  def allow_bid?(
+        %State{auction: %ExAuction.Auction{step: step}, bids: bids},
+        %ExAuction.Auction.Bid{value: value} = bid
+      )
       when is_number(value) do
-    # Find current highest bid
-    current_highest_bid = 20
-    next_allowed_bid = current_highest_bid + (step || 5)
+    next_bid_limit =
+      case bids do
+        # May be step is nullable
+        [%_{value: highest_bid} | _bids] ->
+          highest_bid + step || 0
 
-    if value > next_allowed_bid do
-      # Insert the new bid in registy?
-      {:ok, new_bid}
+        _ ->
+          step || 0
+      end
+
+    unless(value < next_bid_limit) do
+      {:ok, bid}
     else
-      # Update winning bid
-
-      # Q: How do we persist bid
       {:error,
-       ExAuction.Auction.Bid.TooLow.new(
-         "Specified bid is too low, value must be larger than #{next_allowed_bid}"
-       )}
+       Errors.TooLow.new("Specified bid is too low, value must be larger than #{next_bid_limit}")}
     end
   end
 

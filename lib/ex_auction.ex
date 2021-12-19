@@ -1,5 +1,7 @@
 defmodule ExAuction do
-  alias ExAuction.Auction
+  require Logger
+  alias ExAuction.Auction.Supervisor
+  @log_tag "[ExAuction]"
 
   @moduledoc """
   Public interface functions for Auctions
@@ -15,7 +17,7 @@ defmodule ExAuction do
 
   """
 
-  defdelegate place_bid(auction, bid), to: ExAuction.Worker
+  defdelegate place_bid(auction, bid), to: ExAuction.Auction.Worker
 
   @doc """
   Start an auction.
@@ -28,8 +30,22 @@ defmodule ExAuction do
   """
   @spec start(ExAuction.Auction.t()) ::
           {:ok, ExAuction.Auction.t()} | {:error, :alread_started} | {:error, :bad_argument}
-  def start(%ExAuction.Auction{} = auction) do
-    ExAuction.Supervisor.start_auction(auction)
+  def start(%ExAuction.Auction{name: name} = auction) do
+    auction
+    |> Supervisor.start_auction()
+    |> case do
+      {:ok, _pid} ->
+        Logger.info("#{@log_tag} started #{name} successfully")
+        {:ok, %ExAuction.Auction{auction | status: :started}}
+
+      {:error, {:already_started, _pid}} ->
+        Logger.warn("#{@log_tag} attempted to start a running auction - #{name}")
+        {:error, :already_started}
+
+      {:error, reason} ->
+        Logger.error("#{@log_tag} failure on starting auction, reason #{inspect(reason)}")
+        {:error, :bad_argument}
+    end
   end
 
   @doc """
@@ -39,7 +55,6 @@ defmodule ExAuction do
 
       iex> ExAuction.pause()
       {:ok, %ExAuction.Auction{}}
-
   """
   def pause() do
     {:ok, %ExAuction.Auction{}}
