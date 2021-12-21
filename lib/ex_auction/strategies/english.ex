@@ -1,6 +1,6 @@
 defmodule ExAuction.Strategies.English do
   alias ExAuction.Auction.Worker.State
-  alias ExAuction.Auction.Bid.Errors
+  alias ExAuction.Auction.Bid.Error
   @behaviour ExAuction.Behaviour
 
   @impl true
@@ -23,7 +23,7 @@ defmodule ExAuction.Strategies.English do
       {:ok, bid}
     else
       {:error,
-       Errors.TooLow.new("Specified bid is too low, value must be larger than #{next_bid_limit}")}
+       Error.too_low("Specified bid is too low, value must be larger than #{next_bid_limit}")}
     end
   end
 

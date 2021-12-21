@@ -9,20 +9,20 @@ defmodule ExAuction.Auction do
     :status,
     :step,
     :type,
-    :winning_bid
+    :finalize_with
   ]
 
   @type t :: %__MODULE__{
           currency: :string,
-          end_time: :integer,
+          end_time: DateTime.t(),
           item_id: :string,
           min_bid: :decimal,
           name: :string,
-          start_time: :integer,
+          start_time: DateTime.t(),
           step: :decimal,
-          status: :started | :suspended | :finished,
+          status: :active | :suspended | :finished,
           type: :string,
-          winning_bid: :string
+          finalize_with: any()
         }
   defmodule Bid do
     defstruct [:value, :user_id]
@@ -32,17 +32,12 @@ defmodule ExAuction.Auction do
             user_id: :string
           }
 
-    defmodule Errors do
-      defmodule TooLow do
-        defstruct [:code, :message]
+    defmodule Error do
+      defstruct [:code, :message]
 
-        def new(message) do
-          %__MODULE__{
-            code: :bid_too_low,
-            message: message
-          }
-        end
-      end
+      def too_low(message \\ ""), do: %__MODULE__{code: :bid_too_low, message: message}
+
+      def bid_closed(message \\ ""), do: %__MODULE__{code: :bid_closed, message: message}
     end
   end
 end

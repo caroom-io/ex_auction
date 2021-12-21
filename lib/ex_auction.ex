@@ -17,6 +17,9 @@ defmodule ExAuction do
 
   """
 
+  @spec place_bid(ExAuction.Auction.t(), ExAuction.Auction.Bid.t()) ::
+          {:ok, ExAuction.Auction.Bid.t()}
+          | {:error, ExAuction.Auction.Bid.Error.t()}
   defdelegate place_bid(auction, bid), to: ExAuction.Auction.Worker
 
   @doc """
