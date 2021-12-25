@@ -1,11 +1,26 @@
 defmodule ExAuction do
   require Logger
+  alias ExAuction.Auction
   alias ExAuction.Auction.Supervisor
   @log_tag "[ExAuction]"
 
   @moduledoc """
   Public interface functions for Auctions
   """
+
+  @doc """
+  Auction state.
+
+  ## Examples
+
+      iex> ExAuction.get_state(t())
+      {:ok, %ExAuction.Auction{}} | {:error, :auction_not_found}
+
+  """
+
+  @spec state(ExAuction.Auction.t()) ::
+          {:ok, ExAuction.Auction.Worker.State.t()} | {:error, :auction_not_found}
+  defdelegate state(auction), to: ExAuction.Auction.Worker, as: :get_state
 
   @doc """
   Place bid.
@@ -19,8 +34,12 @@ defmodule ExAuction do
 
   @spec place_bid(ExAuction.Auction.t(), ExAuction.Auction.Bid.t()) ::
           {:ok, ExAuction.Auction.Bid.t()}
-          | {:error, ExAuction.Auction.Bid.Error.t()}
-  defdelegate place_bid(auction, bid), to: ExAuction.Auction.Worker
+          | {:error, ExAuction.Auction.Bid.Error.t()} | {:error, :auction_not_found} | {:error, :argument_error}
+  def place_bid(%Auction{} = auction, %Auction.Bid{user_id: user, value: value} = bid) when is_binary(user) and is_integer(value) do
+    ExAuction.Auction.Worker.bid(auction, bid)
+  end
+
+  def place_bid(_, _), do: {:error, :argument_error}
 
   @doc """
   Start an auction.

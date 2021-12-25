@@ -12,6 +12,26 @@ defmodule ExAuction.Auction.Worker do
 
   @timeout :timer.seconds(5)
 
+  def bid(%Auction{} = auction, %Auction.Bid{} = bid) do
+    case whereis(auction) do
+      pid when is_pid(pid) ->
+        GenServer.call(pid, {:place_bid, bid})
+
+      _ ->
+        {:error, :auction_not_found}
+    end
+  end
+
+  def get_state(%ExAuction.Auction{} = auction) do
+    case whereis(auction) do
+      nil ->
+        {:error, :auction_not_found}
+
+      pid ->
+        GenServer.call(pid, :get_state)
+    end
+  end
+
   def start_link(%ExAuction.Auction{finalize_with: final_call} = auction)
       when is_function(final_call, 1) do
     case whereis(auction) do
@@ -39,6 +59,10 @@ defmodule ExAuction.Auction.Worker do
     {:noreply, state}
   end
 
+  def handle_call(:get_state, _from, state) do
+    {:reply, state, state}
+  end
+
   def handle_call(
         {:place_bid, bid},
         _from,
@@ -47,8 +71,11 @@ defmodule ExAuction.Auction.Worker do
     case do_place_bid(state, bid) do
       {:ok, %Auction.Bid{} = last_bid} = result ->
         # sorting the bids in :desc order
-        bids = Enum.sort([last_bid | bids], &(&1.value > &2.value))
-        state = %__MODULE__.State{state | bids: [last_bid | bids]}
+        state = %__MODULE__.State{
+          state
+          | bids: Enum.sort([last_bid | bids], &(&1.value > &2.value))
+        }
+
         {:reply, result, state, @timeout}
 
       error ->
@@ -66,7 +93,7 @@ defmodule ExAuction.Auction.Worker do
 
     # TODO determine the winning bid through the actual strategy adapater
     # Assuming we are in english strategy, taking the head bid
-    final_func.({auction, hd(bids)})
+    _ = final_func.({auction, hd(bids)})
 
     {:stop, :closing_auction, state}
   end
@@ -92,16 +119,6 @@ defmodule ExAuction.Auction.Worker do
 
       :no ->
         {:error, {:already_started, pid}}
-    end
-  end
-
-  def place_bid(%Auction{} = auction, %Auction.Bid{} = bid) do
-    case whereis(auction) do
-      pid when is_pid(pid) ->
-        GenServer.call(pid, {:place_bid, bid})
-
-      _ ->
-        {:error, :no_auction}
     end
   end
 
