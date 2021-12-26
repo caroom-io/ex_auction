@@ -23,11 +23,25 @@ defmodule ExAuction do
   defdelegate state(auction), to: ExAuction.Auction.Worker, as: :get_state
 
   @doc """
+  Stops a running auction
+
+  ## Examples
+
+      iex> ExAuction.stop(%ExAuction.Auction{})
+      :ok
+
+  """
+  @spec stop(ExAuction.Auction.t()) ::
+          :ok | {:error, :argument_error} | {:error, :auction_not_found}
+  def stop(%ExAuction.Auction{} = auction), do: ExAuction.Auction.Worker.halt(auction)
+  def stop(_), do: {:error, :argument_error}
+
+  @doc """
   Place bid.
 
   ## Examples
 
-      iex> ExAuction.place_bid()
+      iex> ExAuction.place_bid(%ExAuction.Auction{}, %ExAuction.Auction.Bid{})
       {:ok, %ExAuction.Auction.Bid{}}
 
   """
@@ -49,7 +63,7 @@ defmodule ExAuction do
 
   ## Examples
 
-      iex> ExAuction.start()
+      iex> ExAuction.start(%ExAuction.Auction{})
       {:ok, %ExAuction.Auction{}}
 
   """

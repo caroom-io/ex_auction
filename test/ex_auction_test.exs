@@ -30,7 +30,7 @@ defmodule ExAuctionTest do
     assert {:error, %Error{code: :bid_too_low}} = ExAuction.place_bid(auction, bid2)
   end
 
-  test "close auction - ensure final call" do
+  test "close of auction - ensure final call" do
     {:ok, %_{pid: pid} = auction} =
       %ExAuction.Auction{
         gen_auction()
@@ -49,6 +49,13 @@ defmodule ExAuctionTest do
       final_auction = %ExAuction.Auction{auction | status: :finished, pid: nil}
       assert_called(FinalCallee.finalize_auction({final_auction, bid2}))
     end
+  end
+
+  test "auction suspension", %{auction: %_{pid: auction_pid} = auction} do
+    assert :ok = ExAuction.stop(auction)
+    :timer.sleep(500)
+
+    refute Process.alive?(auction_pid)
   end
 
   test "get auction state", %{auction: %_{step: step} = auction} do

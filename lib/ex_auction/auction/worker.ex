@@ -32,6 +32,16 @@ defmodule ExAuction.Auction.Worker do
     end
   end
 
+  def halt(%ExAuction.Auction{} = auction) do
+    case whereis(auction) do
+      pid when is_pid(pid) ->
+        GenServer.cast(pid, :halt)
+
+      _ ->
+        {:error, :auction_not_found}
+    end
+  end
+
   def start_link(%ExAuction.Auction{} = auction) do
     case whereis(auction) do
       nil ->
@@ -58,9 +68,20 @@ defmodule ExAuction.Auction.Worker do
     {:noreply, state}
   end
 
-  def handle_call(:get_state, _from, state) do
-    {:reply, state, state}
+  def handle_cast(
+        :halt,
+        %__MODULE__.State{auction: %Auction{status: :active} = auction} = state
+      ) do
+    state = %__MODULE__.State{state | auction: %Auction{auction | status: :suspended}}
+
+    Logger.info("#{@log_tag} suspending auction")
+
+    {:stop, :normal, state}
   end
+
+  def handle_call(:get_state, _from, state), do: {:reply, state, state}
+
+
 
   def handle_call(
         {:place_bid, bid},
