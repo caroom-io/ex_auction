@@ -32,8 +32,7 @@ defmodule ExAuction.Auction.Worker do
     end
   end
 
-  def start_link(%ExAuction.Auction{finalize_with: final_call} = auction)
-      when is_function(final_call, 1) do
+  def start_link(%ExAuction.Auction{} = auction) do
     case whereis(auction) do
       nil ->
         {:ok, pid} = GenServer.start_link(__MODULE__, auction)
@@ -85,17 +84,18 @@ defmodule ExAuction.Auction.Worker do
 
   def handle_info(
         :close_auction,
-        %__MODULE__.State{auction: %Auction{finalize_with: final_func} = auction, bids: bids} =
-          state
+        %__MODULE__.State{auction: %Auction{finalize_with: final_func} = auction} = state
       ) do
     Logger.info("#{@log_tag} closing auction #{state.auction.name}")
     auction = %Auction{auction | status: :finished}
 
-    # TODO determine the winning bid through the actual strategy adapater
-    # Assuming we are in english strategy, taking the head bid
-    _ = final_func.({auction, hd(bids)})
+    {:ok, winning_bid} = get_winning_bid(state)
 
-    {:stop, :closing_auction, state}
+    _ = final_func.({auction, winning_bid})
+
+    state = %__MODULE__.State{state | auction: auction}
+
+    {:stop, :normal, state}
   end
 
   def terminate(reason, _state) do
@@ -104,16 +104,14 @@ defmodule ExAuction.Auction.Worker do
   end
 
   defp whereis(auction) do
-    case :global.whereis_name(%Auction{auction | status: nil}) do
+    case :global.whereis_name(%Auction{auction | status: nil, pid: nil}) do
       :undefined -> nil
       pid -> pid
     end
   end
 
   defp register_process(pid, auction) do
-    auction = %Auction{auction | status: nil}
-
-    case :global.register_name(auction, pid) do
+    case :global.register_name(%Auction{auction | status: nil}, pid) do
       :yes ->
         {:ok, pid}
 
@@ -129,7 +127,12 @@ defmodule ExAuction.Auction.Worker do
          ) do
       apply(unquote(strategy_module), :allow_bid?, [state, bid])
     end
+
+    defp get_winning_bid(%_{auction: %Auction{type: unquote(strategy)}} = state) do
+      apply(unquote(strategy_module), :winning_bid, [state])
+    end
   end)
 
   defp do_place_bid(_, _), do: {:error, :bad_argument}
+  defp get_winning_bid(_), do: {:error, :bad_argument}
 end

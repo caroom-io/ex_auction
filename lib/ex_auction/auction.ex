@@ -9,7 +9,8 @@ defmodule ExAuction.Auction do
     :status,
     :step,
     :type,
-    :finalize_with
+    :finalize_with,
+    :pid
   ]
 
   @type t :: %__MODULE__{
@@ -22,7 +23,8 @@ defmodule ExAuction.Auction do
           step: :decimal,
           status: :active | :suspended | :finished,
           type: :string,
-          finalize_with: any()
+          finalize_with: any(),
+          pid: pid()
         }
   defmodule Bid do
     defstruct [:value, :user_id]

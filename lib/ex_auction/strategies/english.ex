@@ -28,10 +28,12 @@ defmodule ExAuction.Strategies.English do
   end
 
   @impl true
-  def pause(%ExAuction.Auction{} = auction) do
-    # We should update this auction in the registry right?
-    auction = Map.update(auction, :status, :suspended, fn _ -> :suspended end)
+  def winning_bid(%State{bids: bids}) do
+    # Since all bids in the state are already sorted in descending order, we are safe to return the highest bid
+    [winning_bid | _others] = bids
 
-    {:ok, auction}
+    {:ok, winning_bid}
   end
+
+  def winning_bid(_), do: {:error, :bad_argument}
 end

@@ -34,8 +34,11 @@ defmodule ExAuction do
 
   @spec place_bid(ExAuction.Auction.t(), ExAuction.Auction.Bid.t()) ::
           {:ok, ExAuction.Auction.Bid.t()}
-          | {:error, ExAuction.Auction.Bid.Error.t()} | {:error, :auction_not_found} | {:error, :argument_error}
-  def place_bid(%Auction{} = auction, %Auction.Bid{user_id: user, value: value} = bid) when is_binary(user) and is_integer(value) do
+          | {:error, ExAuction.Auction.Bid.Error.t()}
+          | {:error, :auction_not_found}
+          | {:error, :argument_error}
+  def place_bid(%Auction{} = auction, %Auction.Bid{user_id: user, value: value} = bid)
+      when is_binary(user) and is_integer(value) do
     ExAuction.Auction.Worker.bid(auction, bid)
   end
 
@@ -51,14 +54,18 @@ defmodule ExAuction do
 
   """
   @spec start(ExAuction.Auction.t()) ::
-          {:ok, ExAuction.Auction.t()} | {:error, :alread_started} | {:error, :bad_argument}
-  def start(%ExAuction.Auction{name: name} = auction) do
+          {:ok, ExAuction.Auction.t()}
+          | {:error, :alread_started}
+          | {:error, :bad_argument}
+          | {:error, :final_call_notfound}
+  def start(%ExAuction.Auction{name: name, finalize_with: final_call} = auction)
+      when is_function(final_call, 1) do
     auction
     |> Supervisor.start_auction()
     |> case do
-      {:ok, _pid} ->
+      {:ok, pid} ->
         Logger.info("#{@log_tag} started #{name} successfully")
-        {:ok, %ExAuction.Auction{auction | status: :started}}
+        {:ok, %ExAuction.Auction{auction | status: :started, pid: pid}}
 
       {:error, {:already_started, _pid}} ->
         Logger.warn("#{@log_tag} attempted to start a running auction - #{name}")
@@ -70,15 +77,5 @@ defmodule ExAuction do
     end
   end
 
-  @doc """
-  Pause an auction.
-
-  ## Examples
-
-      iex> ExAuction.pause()
-      {:ok, %ExAuction.Auction{}}
-  """
-  def pause() do
-    {:ok, %ExAuction.Auction{}}
-  end
+  def start(_), do: {:error, :final_call_notfound}
 end

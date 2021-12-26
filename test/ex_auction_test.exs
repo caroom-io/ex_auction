@@ -1,14 +1,25 @@
 defmodule ExAuctionTest do
   use ExUnit.Case
-  import ExUnit.CaptureIO
+  import Mock
   # doctest ExAuction
 
   alias ExAuction.Auction.Bid.Error
+
+  defmodule FinalCallee do
+    def finalize_auction(state_tuple) do
+      IO.inspect(state_tuple, label: "Received the state tuple")
+    end
+  end
 
   setup %{} do
     {:ok, auction} = gen_auction() |> ExAuction.start()
 
     %{auction: auction}
+  end
+
+  test "start auction with no final call" do
+    assert {:error, :final_call_notfound} =
+             %ExAuction.Auction{gen_auction() | finalize_with: nil} |> ExAuction.start()
   end
 
   test "place bid", %{auction: auction} do
@@ -17,8 +28,27 @@ defmodule ExAuctionTest do
 
     bid2 = %ExAuction.Auction.Bid{value: 500, user_id: gen_name()}
     assert {:error, %Error{code: :bid_too_low}} = ExAuction.place_bid(auction, bid2)
+  end
 
-    # assert capture_io(fn -> :timer.sleep(7000) end) |> IO.inspect(label: "Captured")
+  test "close auction - ensure final call" do
+    {:ok, %_{pid: pid} = auction} =
+      %ExAuction.Auction{
+        gen_auction()
+        | finalize_with: &FinalCallee.finalize_auction/1
+      }
+      |> ExAuction.start()
+
+    bid1 = %ExAuction.Auction.Bid{value: 10000, user_id: gen_name()}
+    bid2 = %ExAuction.Auction.Bid{value: 20000, user_id: gen_name()}
+    assert {:ok, %ExAuction.Auction.Bid{}} = ExAuction.place_bid(auction, bid1)
+    assert {:ok, %ExAuction.Auction.Bid{}} = ExAuction.place_bid(auction, bid2)
+
+    with_mock(FinalCallee, [:passthrough], finalize_auction: fn _arg -> :ok end) do
+      send(pid, :close_auction)
+      :timer.sleep(1000)
+      final_auction = %ExAuction.Auction{auction | status: :finished, pid: nil}
+      assert_called(FinalCallee.finalize_auction({final_auction, bid2}))
+    end
   end
 
   test "get auction state", %{auction: %_{step: step} = auction} do
@@ -29,18 +59,15 @@ defmodule ExAuctionTest do
 
     assert %_{
              auction: %ExAuction.Auction{status: :active},
-             bids: [%{user_id: user_id, value: v1}, %{value: v2}, _, _, _, _, _, _, _, _]
+             bids: [%{value: v1}, %{value: v2}, _, _, _, _, _, _, _, _]
            } = ExAuction.state(auction)
 
     # cheking the sort order of bids
     assert v2 < v1
   end
 
-  test "start auction with no final call", %{auction: auction} do
-    # assert true
-  end
-
   def gen_name, do: :crypto.strong_rand_bytes(20) |> Base.encode64()
+
   def gen_auction do
     start_time = DateTime.utc_now()
     end_time = DateTime.add(start_time, 6)
@@ -54,7 +81,7 @@ defmodule ExAuctionTest do
       start_time: start_time,
       step: 10000,
       type: :english,
-      finalize_with: fn {auction, winning_bid} ->
+      finalize_with: fn {_auction, winning_bid} ->
         IO.inspect(winning_bid, label: "Winning Bid")
       end
     }
