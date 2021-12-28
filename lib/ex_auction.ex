@@ -13,7 +13,7 @@ defmodule ExAuction do
 
   ## Examples
 
-      iex> ExAuction.get_state(t())
+      iex> ExAuction.state(t())
       {:ok, %ExAuction.Auction{}} | {:error, :auction_not_found}
 
   """
