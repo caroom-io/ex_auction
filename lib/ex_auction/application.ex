@@ -7,7 +7,7 @@ defmodule ExAuction.Application do
 
   def start(_type, _args) do
     children = [
-      {Registry, keys: :unique, name: ExAuction.Registry}
+      ExAuction.Auction.Supervisor
     ]
 
     opts = [strategy: :one_for_one, name: ExAuction.Supervisor]
