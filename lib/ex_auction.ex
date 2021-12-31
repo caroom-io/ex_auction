@@ -51,8 +51,8 @@ defmodule ExAuction do
           | {:error, ExAuction.Auction.Bid.Error.t()}
           | {:error, :auction_not_found}
           | {:error, :argument_error}
-  def place_bid(%Auction{} = auction, %Auction.Bid{user_id: user, value: value} = bid)
-      when is_binary(user) and is_integer(value) do
+  def place_bid(%Auction{} = auction, %Auction.Bid{value: value} = bid)
+      when is_integer(value) do
     ExAuction.Auction.Worker.bid(auction, bid)
   end
 
