@@ -10,7 +10,7 @@ defmodule ExAuction.Auction.Supervisor do
     DynamicSupervisor.init(strategy: :one_for_one)
   end
 
-  def start_auction(%ExAuction.Auction{} = auction) do
-    DynamicSupervisor.start_child(__MODULE__, {ExAuction.Auction.Worker, auction})
+  def start_auction(%ExAuction.Auction.Worker.State{} = auction_state) do
+    DynamicSupervisor.start_child(__MODULE__, {ExAuction.Auction.Worker, auction_state})
   end
 end

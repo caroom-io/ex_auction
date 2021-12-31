@@ -59,22 +59,26 @@ defmodule ExAuction do
   def place_bid(_, _), do: {:error, :argument_error}
 
   @doc """
-  Start an auction.
+  Start a new auction or restart an existing one with optional bids list.
 
   ## Examples
 
-      iex> ExAuction.start(%ExAuction.Auction{})
+      iex> ExAuction.start(%ExAuction.Auction{}, bids \\ [])
       {:ok, %ExAuction.Auction{}}
 
   """
-  @spec start(ExAuction.Auction.t()) ::
+  @spec start(ExAuction.Auction.t(), [ExAuction.Auction.Bid.t()]) ::
           {:ok, ExAuction.Auction.t()}
           | {:error, :alread_started}
           | {:error, :bad_argument}
-          | {:error, :final_call_notfound}
-  def start(%ExAuction.Auction{name: name, finalize_with: final_call} = auction)
+          | {:error, :invalid_input}
+  def start(auction) do
+    start(auction, [])
+  end
+
+  def start(%ExAuction.Auction{name: name, finalize_with: final_call} = auction, bids)
       when is_function(final_call, 1) do
-    auction
+    %ExAuction.Auction.Worker.State{auction: auction, bids: bids}
     |> Supervisor.start_auction()
     |> case do
       {:ok, pid} ->
@@ -91,5 +95,5 @@ defmodule ExAuction do
     end
   end
 
-  def start(_), do: {:error, :final_call_notfound}
+  def start(_, _), do: {:error, :invalid_input}
 end

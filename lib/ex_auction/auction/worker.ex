@@ -42,10 +42,10 @@ defmodule ExAuction.Auction.Worker do
     end
   end
 
-  def start_link(%ExAuction.Auction{} = auction) do
+  def start_link(%__MODULE__.State{auction: %ExAuction.Auction{} = auction} = auction_state) do
     case whereis(auction) do
       nil ->
-        {:ok, pid} = GenServer.start_link(__MODULE__, auction)
+        {:ok, pid} = GenServer.start_link(__MODULE__, auction_state)
         register_process(pid, auction)
 
       pid ->
@@ -53,8 +53,8 @@ defmodule ExAuction.Auction.Worker do
     end
   end
 
-  def init(auction) do
-    state = %__MODULE__.State{auction: %Auction{auction | status: :active}, bids: []}
+  def init(%__MODULE__.State{auction: auction, bids: init_state_bids} = _auction_state) do
+    state = %__MODULE__.State{auction: %Auction{auction | status: :active}, bids: init_state_bids}
 
     {:ok, state, {:continue, auction}}
   end
@@ -80,8 +80,6 @@ defmodule ExAuction.Auction.Worker do
   end
 
   def handle_call(:get_state, _from, state), do: {:reply, state, state}
-
-
 
   def handle_call(
         {:place_bid, bid},
