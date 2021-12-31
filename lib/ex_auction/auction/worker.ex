@@ -123,14 +123,14 @@ defmodule ExAuction.Auction.Worker do
   end
 
   defp whereis(auction) do
-    case :global.whereis_name(%Auction{auction | status: nil, pid: nil}) do
+    case :global.whereis_name(auction.name) do
       :undefined -> nil
       pid -> pid
     end
   end
 
   defp register_process(pid, auction) do
-    case :global.register_name(%Auction{auction | status: nil}, pid) do
+    case :global.register_name(auction.name, pid) do
       :yes ->
         {:ok, pid}
 
