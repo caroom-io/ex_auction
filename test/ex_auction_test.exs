@@ -112,7 +112,7 @@ defmodule ExAuctionTest do
       name: gen_name(),
       start_time: start_time,
       step: 10000,
-      type: :english,
+      type: :ENGLISH,
       finalize_with: fn {_auction, winning_bid} ->
         IO.inspect(winning_bid, label: "Winning Bid")
       end

@@ -4,7 +4,7 @@ defmodule ExAuction.Auction.Worker do
 
   alias ExAuction.Auction
   @log_tag "[AuctionWorker]"
-  @strategies [english: ExAuction.Strategies.English]
+  @strategies [ENGLISH: ExAuction.Strategies.English]
 
   defmodule State do
     defstruct auction: nil, bids: []
