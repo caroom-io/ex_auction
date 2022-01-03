@@ -13,7 +13,7 @@ defmodule ExAuction.Auction.Worker do
   @timeout :timer.seconds(5)
 
   def bid(%Auction{} = auction, %Auction.Bid{} = bid) do
-    case whereis(auction) do
+    case whereis(auction.name) do
       pid when is_pid(pid) ->
         GenServer.call(pid, {:place_bid, bid})
 
@@ -23,7 +23,7 @@ defmodule ExAuction.Auction.Worker do
   end
 
   def get_state(%ExAuction.Auction{} = auction) do
-    case whereis(auction) do
+    case whereis(auction.name) do
       nil ->
         {:error, :auction_not_found}
 
@@ -33,7 +33,7 @@ defmodule ExAuction.Auction.Worker do
   end
 
   def halt(%ExAuction.Auction{} = auction) do
-    case whereis(auction) do
+    case whereis(auction.name) do
       pid when is_pid(pid) ->
         GenServer.cast(pid, :halt)
 
@@ -43,17 +43,17 @@ defmodule ExAuction.Auction.Worker do
   end
 
   def start_link(%__MODULE__.State{auction: %ExAuction.Auction{} = auction} = auction_state) do
-    case whereis(auction) do
+    case whereis(auction.name) do
       nil ->
         {:ok, pid} = GenServer.start_link(__MODULE__, auction_state)
-        register_process(pid, auction)
+        register_process(pid, auction.name)
 
       pid ->
         {:error, {:already_started, pid}}
     end
   end
 
-  def init(%__MODULE__.State{auction: auction, bids: init_state_bids} = _auction_state) do
+  def init(%__MODULE__.State{auction: auction, bids: init_state_bids}) do
     state = %__MODULE__.State{auction: %Auction{auction | status: :active}, bids: init_state_bids}
 
     {:ok, state, {:continue, auction}}
@@ -122,15 +122,15 @@ defmodule ExAuction.Auction.Worker do
     :ok
   end
 
-  defp whereis(auction) do
-    case :global.whereis_name(auction.name) do
+  defp whereis(auction_name) do
+    case :global.whereis_name(auction_name) do
       :undefined -> nil
       pid -> pid
     end
   end
 
-  defp register_process(pid, auction) do
-    case :global.register_name(auction.name, pid) do
+  defp register_process(pid, auction_name) do
+    case :global.register_name(auction_name, pid) do
       :yes ->
         {:ok, pid}
 

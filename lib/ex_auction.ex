@@ -71,7 +71,6 @@ defmodule ExAuction do
           {:ok, ExAuction.Auction.t()}
           | {:error, :alread_started}
           | {:error, :bad_argument}
-          | {:error, :invalid_input}
   def start(auction) do
     start(auction, [])
   end
@@ -95,5 +94,5 @@ defmodule ExAuction do
     end
   end
 
-  def start(_, _), do: {:error, :invalid_input}
+  def start(_, _), do: {:error, :bad_argument}
 end

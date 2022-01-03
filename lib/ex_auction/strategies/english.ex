@@ -9,11 +9,13 @@ defmodule ExAuction.Strategies.English do
         %ExAuction.Auction.Bid{value: value} = bid
       )
       when is_number(value) do
+    # TODO: Consider auction.min_bid together with step
     next_bid_limit =
       case bids do
         # May be step is nullable
         [%_{value: highest_bid} | _bids] ->
-          highest_bid + step || 0
+          step = step || 0
+          highest_bid + step
 
         _ ->
           step || 0

@@ -18,7 +18,7 @@ defmodule ExAuctionTest do
   end
 
   test "start auction with no final call" do
-    assert {:error, :invalid_input} =
+    assert {:error, :bad_argument} =
              %ExAuction.Auction{gen_auction() | finalize_with: nil} |> ExAuction.start()
   end
 
