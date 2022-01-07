@@ -30,11 +30,13 @@ defmodule ExAuction.Strategies.English do
   end
 
   @impl true
-  def winning_bid(%State{bids: bids}) do
+  def winning_bid(%State{bids: [winning_bid | _others]}) do
     # Since all bids in the state are already sorted in descending order, we are safe to return the highest bid
-    [winning_bid | _others] = bids
-
     {:ok, winning_bid}
+  end
+
+  def winning_bid(%State{bids: _empty_bids_list}) do
+    {:ok, :no_bid_submitted_yet}
   end
 
   def winning_bid(_), do: {:error, :bad_argument}

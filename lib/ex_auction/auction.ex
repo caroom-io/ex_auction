@@ -27,11 +27,12 @@ defmodule ExAuction.Auction do
           pid: pid()
         }
   defmodule Bid do
-    defstruct [:value, :user_id]
+    defstruct [:id, :value, :user_id]
 
     @type t :: %__MODULE__{
+            id: any(),
             value: :integer,
-            user_id: :string
+            user_id: any()
           }
 
     defmodule Error do

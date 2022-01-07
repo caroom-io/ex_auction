@@ -49,6 +49,7 @@ defmodule ExAuction.Auction.Worker do
         register_process(pid, auction.name)
 
       pid ->
+        # TODO: We should check the state of the auction, if suspended, then we resume it
         {:error, {:already_started, pid}}
     end
   end
@@ -59,11 +60,24 @@ defmodule ExAuction.Auction.Worker do
     {:ok, state, {:continue, auction}}
   end
 
-  def handle_continue(%Auction{start_time: st, end_time: et}, state) do
-    close_time = DateTime.diff(et, st, :millisecond)
-    Process.send_after(self(), :close_auction, close_time)
+  def handle_continue(%Auction{end_time: et}, state) do
+    now = DateTime.utc_now()
+    close_time = DateTime.diff(et, now, :millisecond)
 
-    Logger.info("#{@log_tag} auction will be closed in #{close_time}ms")
+    case close_time do
+      time when time > 0 ->
+        Logger.info("#{@log_tag} auction will be closed in #{close_time}ms")
+        Process.send_after(self(), :close_auction, close_time)
+
+      _ ->
+        Logger.info(
+          "#{@log_tag} auction will be closed right away because endtime is passed by #{
+            close_time
+          }ms"
+        )
+
+        Process.send(self(), :close_auction, [:nosuspend])
+    end
 
     {:noreply, state}
   end
@@ -88,6 +102,7 @@ defmodule ExAuction.Auction.Worker do
       ) do
     case do_place_bid(state, bid) do
       {:ok, %Auction.Bid{} = last_bid} = result ->
+        # TODO: Confirm why we need this sorting, it feels artificial
         # sorting the bids in :desc order
         state = %__MODULE__.State{
           state
