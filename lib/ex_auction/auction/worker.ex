@@ -71,9 +71,7 @@ defmodule ExAuction.Auction.Worker do
 
       _ ->
         Logger.info(
-          "#{@log_tag} auction will be closed right away because endtime is passed by #{
-            close_time
-          }ms"
+          "#{@log_tag} auction will be closed right away because endtime is passed by #{close_time}ms"
         )
 
         Process.send(self(), :close_auction, [:nosuspend])
@@ -129,7 +127,9 @@ defmodule ExAuction.Auction.Worker do
 
     state = %__MODULE__.State{state | auction: auction}
 
-    {:stop, :normal, state}
+    ExAuction.Auction.Supervisor.stop_auction(self())
+
+    {:noreply, state}
   end
 
   def terminate(reason, _state) do
