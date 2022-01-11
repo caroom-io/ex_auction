@@ -1,5 +1,5 @@
 defmodule ExAuction.Auction.Worker do
-  use GenServer
+  use GenServer, restart: :transient
   require Logger
 
   alias ExAuction.Auction
@@ -127,9 +127,7 @@ defmodule ExAuction.Auction.Worker do
 
     state = %__MODULE__.State{state | auction: auction}
 
-    ExAuction.Auction.Supervisor.stop_auction(self())
-
-    {:noreply, state}
+    {:stop, :normal, state}
   end
 
   def terminate(reason, _state) do
