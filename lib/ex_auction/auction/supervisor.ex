@@ -15,6 +15,7 @@ defmodule ExAuction.Auction.Supervisor do
   end
 
   def stop_auction(pid) do
+    :timer.sleep(1000)
     DynamicSupervisor.terminate_child(__MODULE__, pid)
   end
 end
