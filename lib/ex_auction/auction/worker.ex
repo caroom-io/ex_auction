@@ -60,7 +60,8 @@ defmodule ExAuction.Auction.Worker do
     {:ok, state, {:continue, auction}}
   end
 
-  def handle_continue(%Auction{end_time: et}, state) do
+  def handle_continue(%Auction{name: name, end_time: et}, state) do
+    Logger.info("#{@log_tag} started #{name} successfully")
     now = DateTime.utc_now()
     close_time = DateTime.diff(et, now, :millisecond)
 

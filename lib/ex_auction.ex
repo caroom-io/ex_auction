@@ -81,7 +81,6 @@ defmodule ExAuction do
     |> Supervisor.start_auction()
     |> case do
       {:ok, pid} ->
-        Logger.info("#{@log_tag} started #{name} successfully")
         {:ok, %ExAuction.Auction{auction | status: :started, pid: pid}}
 
       {:error, {:already_started, _pid}} ->
