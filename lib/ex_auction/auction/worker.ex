@@ -1,10 +1,10 @@
 defmodule ExAuction.Auction.Worker do
-  use GenServer
+  use GenServer, restart: :transient
   require Logger
 
   alias ExAuction.Auction
   @log_tag "[AuctionWorker]"
-  @strategies [english: ExAuction.Strategies.English]
+  @strategies [ENGLISH: ExAuction.Strategies.English]
 
   defmodule State do
     defstruct auction: nil, bids: []
@@ -13,7 +13,7 @@ defmodule ExAuction.Auction.Worker do
   @timeout :timer.seconds(5)
 
   def bid(%Auction{} = auction, %Auction.Bid{} = bid) do
-    case whereis(auction) do
+    case whereis(auction.name) do
       pid when is_pid(pid) ->
         GenServer.call(pid, {:place_bid, bid})
 
@@ -23,7 +23,7 @@ defmodule ExAuction.Auction.Worker do
   end
 
   def get_state(%ExAuction.Auction{} = auction) do
-    case whereis(auction) do
+    case whereis(auction.name) do
       nil ->
         {:error, :auction_not_found}
 
@@ -33,7 +33,7 @@ defmodule ExAuction.Auction.Worker do
   end
 
   def halt(%ExAuction.Auction{} = auction) do
-    case whereis(auction) do
+    case whereis(auction.name) do
       pid when is_pid(pid) ->
         GenServer.cast(pid, :halt)
 
@@ -42,28 +42,41 @@ defmodule ExAuction.Auction.Worker do
     end
   end
 
-  def start_link(%ExAuction.Auction{} = auction) do
-    case whereis(auction) do
+  def start_link(%__MODULE__.State{auction: %ExAuction.Auction{} = auction} = auction_state) do
+    case whereis(auction.name) do
       nil ->
-        {:ok, pid} = GenServer.start_link(__MODULE__, auction)
-        register_process(pid, auction)
+        {:ok, pid} = GenServer.start_link(__MODULE__, auction_state)
+        register_process(pid, auction.name)
 
       pid ->
+        # TODO: We should check the state of the auction, if suspended, then we resume it
         {:error, {:already_started, pid}}
     end
   end
 
-  def init(auction) do
-    state = %__MODULE__.State{auction: %Auction{auction | status: :active}, bids: []}
+  def init(%__MODULE__.State{auction: auction, bids: init_state_bids}) do
+    state = %__MODULE__.State{auction: %Auction{auction | status: :active}, bids: init_state_bids}
 
     {:ok, state, {:continue, auction}}
   end
 
-  def handle_continue(%Auction{start_time: st, end_time: et}, state) do
-    close_time = DateTime.diff(et, st, :millisecond)
-    Process.send_after(self(), :close_auction, close_time)
+  def handle_continue(%Auction{name: name, end_time: et}, state) do
+    Logger.info("#{@log_tag} started #{name} successfully")
+    now = DateTime.utc_now()
+    close_time = DateTime.diff(et, now, :millisecond)
 
-    Logger.info("#{@log_tag} auction will be closed in #{close_time}ms")
+    case close_time do
+      time when time > 0 ->
+        Logger.info("#{@log_tag} auction will be closed in #{close_time}ms")
+        Process.send_after(self(), :close_auction, close_time)
+
+      _ ->
+        Logger.info(
+          "#{@log_tag} auction will be closed right away because endtime is passed by #{close_time}ms"
+        )
+
+        Process.send(self(), :close_auction, [:nosuspend])
+    end
 
     {:noreply, state}
   end
@@ -81,8 +94,6 @@ defmodule ExAuction.Auction.Worker do
 
   def handle_call(:get_state, _from, state), do: {:reply, state, state}
 
-
-
   def handle_call(
         {:place_bid, bid},
         _from,
@@ -90,6 +101,7 @@ defmodule ExAuction.Auction.Worker do
       ) do
     case do_place_bid(state, bid) do
       {:ok, %Auction.Bid{} = last_bid} = result ->
+        # TODO: Confirm why we need this sorting, it feels artificial
         # sorting the bids in :desc order
         state = %__MODULE__.State{
           state
@@ -124,15 +136,15 @@ defmodule ExAuction.Auction.Worker do
     :ok
   end
 
-  defp whereis(auction) do
-    case :global.whereis_name(%Auction{auction | status: nil, pid: nil}) do
+  defp whereis(auction_name) do
+    case :global.whereis_name(auction_name) do
       :undefined -> nil
       pid -> pid
     end
   end
 
-  defp register_process(pid, auction) do
-    case :global.register_name(%Auction{auction | status: nil}, pid) do
+  defp register_process(pid, auction_name) do
+    case :global.register_name(auction_name, pid) do
       :yes ->
         {:ok, pid}
 

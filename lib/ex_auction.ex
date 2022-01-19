@@ -51,34 +51,36 @@ defmodule ExAuction do
           | {:error, ExAuction.Auction.Bid.Error.t()}
           | {:error, :auction_not_found}
           | {:error, :argument_error}
-  def place_bid(%Auction{} = auction, %Auction.Bid{user_id: user, value: value} = bid)
-      when is_binary(user) and is_integer(value) do
+  def place_bid(%Auction{} = auction, %Auction.Bid{value: value} = bid)
+      when is_integer(value) do
     ExAuction.Auction.Worker.bid(auction, bid)
   end
 
   def place_bid(_, _), do: {:error, :argument_error}
 
   @doc """
-  Start an auction.
+  Start a new auction or restart an existing one with optional bids list.
 
   ## Examples
 
-      iex> ExAuction.start(%ExAuction.Auction{})
+      iex> ExAuction.start(%ExAuction.Auction{}, bids \\ [])
       {:ok, %ExAuction.Auction{}}
 
   """
-  @spec start(ExAuction.Auction.t()) ::
+  @spec start(ExAuction.Auction.t(), [ExAuction.Auction.Bid.t()]) ::
           {:ok, ExAuction.Auction.t()}
           | {:error, :alread_started}
           | {:error, :bad_argument}
-          | {:error, :final_call_notfound}
-  def start(%ExAuction.Auction{name: name, finalize_with: final_call} = auction)
+  def start(auction) do
+    start(auction, [])
+  end
+
+  def start(%ExAuction.Auction{name: name, finalize_with: final_call} = auction, bids)
       when is_function(final_call, 1) do
-    auction
+    %ExAuction.Auction.Worker.State{auction: auction, bids: bids}
     |> Supervisor.start_auction()
     |> case do
       {:ok, pid} ->
-        Logger.info("#{@log_tag} started #{name} successfully")
         {:ok, %ExAuction.Auction{auction | status: :started, pid: pid}}
 
       {:error, {:already_started, _pid}} ->
@@ -91,5 +93,5 @@ defmodule ExAuction do
     end
   end
 
-  def start(_), do: {:error, :final_call_notfound}
+  def start(_, _), do: {:error, :bad_argument}
 end
