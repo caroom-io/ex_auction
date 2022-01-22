@@ -9,7 +9,6 @@ defmodule ExAuction.Auction do
     :status,
     :step,
     :type,
-    :ping_1h_left,
     :callbacks,
     :pid
   ]
