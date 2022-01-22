@@ -11,6 +11,12 @@ defmodule ExAuctionTest do
     end
   end
 
+  defmodule FinalCalleeB do
+    def finalize_auction(state_tuple) do
+      IO.inspect(state_tuple, label: "Received the state tuple")
+    end
+  end
+
   setup %{} do
     {:ok, auction} = gen_auction() |> ExAuction.start()
 
@@ -31,7 +37,8 @@ defmodule ExAuctionTest do
     assert {:error, %Error{code: :bid_too_low}} = ExAuction.place_bid(auction, bid2)
   end
 
-  test "close of auction - ensure final call" do
+  test_with_mock "close of auction - ensure final call", %{}, FinalCallee, [],
+    finalize_auction: fn _arg -> :ok end do
     {:ok, %_{pid: pid} = auction} =
       %ExAuction.Auction{
         gen_auction()
@@ -44,12 +51,10 @@ defmodule ExAuctionTest do
     assert {:ok, %ExAuction.Auction.Bid{}} = ExAuction.place_bid(auction, bid1)
     assert {:ok, %ExAuction.Auction.Bid{}} = ExAuction.place_bid(auction, bid2)
 
-    with_mock(FinalCallee, [:passthrough], finalize_auction: fn _arg -> :ok end) do
-      send(pid, :close_auction)
-      :timer.sleep(1000)
-      final_auction = %ExAuction.Auction{auction | status: :finished, pid: nil}
-      assert_called(FinalCallee.finalize_auction({final_auction, bid2}))
-    end
+    send(pid, :close_auction)
+    :timer.sleep(1000)
+    final_auction = %{auction | status: :finished, pid: nil}
+    assert_called(FinalCallee.finalize_auction({final_auction, bid2}))
   end
 
   test "restart auction with exisiting offers from previous session" do
@@ -70,7 +75,8 @@ defmodule ExAuctionTest do
     assert 2 = length(bids_in_state)
   end
 
-  test "Ensure proper completion if auction end_time has passed" do
+  test_with_mock "Ensure proper completion if auction end_time has passed", %{}, FinalCalleeB, [],
+    finalize_auction: fn _arg -> :ok end do
     now = DateTime.utc_now()
     start_time = DateTime.add(now, -600)
     end_time = DateTime.add(now, -300)
@@ -79,19 +85,18 @@ defmodule ExAuctionTest do
     bid2 = %ExAuction.Auction.Bid{value: 20000, user_id: gen_name()}
     bids = [bid2, bid1]
 
-    with_mock(FinalCallee, finalize_auction: fn _arg -> :ok end) do
-      auction = %ExAuction.Auction{
-        gen_auction()
-        | callbacks: %{finalize_with: &FinalCallee.finalize_auction/1},
-          start_time: start_time,
-          end_time: end_time
-      }
+    auction = %ExAuction.Auction{
+      gen_auction()
+      | callbacks: %{finalize_with: &FinalCalleeB.finalize_auction/1},
+        start_time: start_time,
+        end_time: end_time
+    }
 
-      {:ok, %_{pid: _pid} = auction} = ExAuction.start(auction, bids)
+    {:ok, %_{pid: _pid} = auction} = ExAuction.start(auction, bids)
 
-      final_auction = %ExAuction.Auction{auction | status: :finished, pid: nil}
-      assert_called(FinalCallee.finalize_auction({final_auction, bid2}))
-    end
+    :timer.sleep(10)
+    final_auction = %{auction | status: :finished, pid: nil}
+    assert_called(FinalCalleeB.finalize_auction({final_auction, bid2}))
   end
 
   test "auction suspension", %{auction: %_{pid: auction_pid} = auction} do
