@@ -19,7 +19,8 @@ defmodule ExAuctionTest do
 
   test "start auction with no final call" do
     assert {:error, :bad_argument} =
-             %ExAuction.Auction{gen_auction() | finalize_with: nil} |> ExAuction.start()
+             %ExAuction.Auction{gen_auction() | callbacks: %{finalize_with: nil}}
+             |> ExAuction.start()
   end
 
   test "place bid", %{auction: auction} do
@@ -34,7 +35,7 @@ defmodule ExAuctionTest do
     {:ok, %_{pid: pid} = auction} =
       %ExAuction.Auction{
         gen_auction()
-        | finalize_with: &FinalCallee.finalize_auction/1
+        | callbacks: %{finalize_with: &FinalCallee.finalize_auction/1}
       }
       |> ExAuction.start()
 
@@ -58,7 +59,7 @@ defmodule ExAuctionTest do
 
     auction = %ExAuction.Auction{
       gen_auction()
-      | finalize_with: &FinalCallee.finalize_auction/1
+      | callbacks: %{finalize_with: &FinalCallee.finalize_auction/1}
     }
 
     {:ok, %_{pid: _pid} = auction} = ExAuction.start(auction, bids)
@@ -81,7 +82,7 @@ defmodule ExAuctionTest do
     with_mock(FinalCallee, finalize_auction: fn _arg -> :ok end) do
       auction = %ExAuction.Auction{
         gen_auction()
-        | finalize_with: &FinalCallee.finalize_auction/1,
+        | callbacks: %{finalize_with: &FinalCallee.finalize_auction/1},
           start_time: start_time,
           end_time: end_time
       }
@@ -130,9 +131,11 @@ defmodule ExAuctionTest do
       start_time: start_time,
       step: 10000,
       type: :ENGLISH,
-      finalize_with: fn {_auction, winning_bid} ->
-        IO.inspect(winning_bid, label: "Winning Bid")
-      end
+      callbacks: %{
+        finalize_with: fn {_auction, winning_bid} ->
+          IO.inspect(winning_bid, label: "Winning Bid")
+        end
+      }
     }
   end
 end
