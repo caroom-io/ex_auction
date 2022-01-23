@@ -9,7 +9,7 @@ defmodule ExAuction.Auction do
     :status,
     :step,
     :type,
-    :finalize_with,
+    :callbacks,
     :pid
   ]
 
@@ -23,7 +23,10 @@ defmodule ExAuction.Auction do
           step: :decimal,
           status: :active | :suspended | :finished,
           type: :string,
-          finalize_with: any(),
+          callbacks: %{
+            ping_1h_left: any(),
+            finalize_with: any()
+          },
           pid: pid()
         }
   defmodule Bid do

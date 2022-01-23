@@ -10,8 +10,6 @@ defmodule ExAuction.Auction.Worker do
     defstruct auction: nil, bids: []
   end
 
-  @timeout :timer.seconds(5)
-
   def bid(%Auction{} = auction, %Auction.Bid{} = bid) do
     case whereis(auction.name) do
       pid when is_pid(pid) ->
@@ -60,7 +58,7 @@ defmodule ExAuction.Auction.Worker do
     {:ok, state, {:continue, auction}}
   end
 
-  def handle_continue(%Auction{name: name, end_time: et}, state) do
+  def handle_continue(%Auction{name: name, end_time: et} = auction, state) do
     Logger.info("#{@log_tag} started #{name} successfully")
     now = DateTime.utc_now()
     close_time = DateTime.diff(et, now, :millisecond)
@@ -69,6 +67,13 @@ defmodule ExAuction.Auction.Worker do
       time when time > 0 ->
         Logger.info("#{@log_tag} auction will be closed in #{close_time}ms")
         Process.send_after(self(), :close_auction, close_time)
+
+        hour_in_ms = 1000 * 60 * 60
+
+        if time > hour_in_ms do
+          time_to_notify = close_time - hour_in_ms
+          notify_one_hour_to_go(auction, time_to_notify)
+        end
 
       _ ->
         Logger.info(
@@ -80,6 +85,13 @@ defmodule ExAuction.Auction.Worker do
 
     {:noreply, state}
   end
+
+  def notify_one_hour_to_go(%{callbacks: %{ping_1h_left: hour_to_go_callback}}, time_to_notify)
+      when not is_nil(hour_to_go_callback) do
+    Process.send_after(self(), :ping_1h_left, time_to_notify)
+  end
+
+  def notify_one_hour_to_go(_auction, _time_to_notify), do: :ok
 
   def handle_cast(
         :halt,
@@ -108,7 +120,7 @@ defmodule ExAuction.Auction.Worker do
           | bids: Enum.sort([last_bid | bids], &(&1.value > &2.value))
         }
 
-        {:reply, result, state, @timeout}
+        {:reply, result, state}
 
       error ->
         {:reply, error, state}
@@ -116,8 +128,24 @@ defmodule ExAuction.Auction.Worker do
   end
 
   def handle_info(
+        :ping_1h_left,
+        %__MODULE__.State{
+          auction: %Auction{callbacks: %{ping_1h_left: hour_to_go_callback}} = auction
+        } = state
+      ) do
+    Logger.info("#{@log_tag} Notifying of an hour before auction #{state.auction.name} closes")
+
+    {:ok, highest_bid} = get_winning_bid(state)
+
+    _ = hour_to_go_callback.({auction, highest_bid})
+
+    {:noreply, state}
+  end
+
+  def handle_info(
         :close_auction,
-        %__MODULE__.State{auction: %Auction{finalize_with: final_func} = auction} = state
+        %__MODULE__.State{auction: %Auction{callbacks: %{finalize_with: final_func}} = auction} =
+          state
       ) do
     Logger.info("#{@log_tag} closing auction #{state.auction.name}")
     auction = %Auction{auction | status: :finished}

@@ -75,7 +75,10 @@ defmodule ExAuction do
     start(auction, [])
   end
 
-  def start(%ExAuction.Auction{name: name, finalize_with: final_call} = auction, bids)
+  def start(
+        %ExAuction.Auction{name: name, callbacks: %{finalize_with: final_call}} = auction,
+        bids
+      )
       when is_function(final_call, 1) do
     %ExAuction.Auction.Worker.State{auction: auction, bids: bids}
     |> Supervisor.start_auction()
