@@ -10,8 +10,6 @@ defmodule ExAuction.Auction.Worker do
     defstruct auction: nil, bids: []
   end
 
-  @timeout :timer.seconds(5)
-
   def bid(%Auction{} = auction, %Auction.Bid{} = bid) do
     case whereis(auction.name) do
       pid when is_pid(pid) ->
@@ -122,7 +120,7 @@ defmodule ExAuction.Auction.Worker do
           | bids: Enum.sort([last_bid | bids], &(&1.value > &2.value))
         }
 
-        {:reply, result, state, @timeout}
+        {:reply, result, state}
 
       error ->
         {:reply, error, state}
@@ -141,7 +139,7 @@ defmodule ExAuction.Auction.Worker do
 
     _ = hour_to_go_callback.({auction, highest_bid})
 
-    {:stop, :normal, state}
+    {:noreply, state}
   end
 
   def handle_info(
